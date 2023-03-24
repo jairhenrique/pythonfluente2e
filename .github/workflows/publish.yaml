@@ -13,22 +13,34 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install asciidoctor
-        run: npm install -g asciidoctor asciidoctor-chunker
-
-      - name: Build
-        run: asciidoctor livro.adoc -o index.html
-
-      # - name: Split
-      #   run: asciidoctor-chunker index.html -o output
-
-      - name: Publish
-        uses: appleboy/scp-action@master
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: ${{ secrets.PORT }}
-          source: "index.html"
-          # source: "output/*"
-          target: "~/pythonfluente.com/"
+          ruby-version: 3.0
+
+      - name: Install Asciidoctor
+        run: gem install asciidoctor asciidoctor-epub3
+
+      - name: Generate html from AsciiDoc
+        run: |
+          asciidoctor livro.adoc -o index.html
+
+      - name: Generate EPUB from AsciiDoc
+        run: |
+          asciidoctor-epub3 livro.adoc -o 'Python Fluente, Segunda Edição (2023).epub'
+
+      - name: Install asciidoctor-chunker
+        run: npm install -g asciidoctor-chunker
+
+      - name: Split html
+        run: |
+          asciidoctor-chunker index.html -o output
+          tar -zcvf livro.tar.gz output
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            index.html
+            livro.tar.gz
+            'Python Fluente, Segunda Edição (2023).epub'
